@@ -1,32 +1,35 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createCategory } from "../../api/categories";
 
 export default function Create() {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
 
     const [form, setForm] = useState({ name: "", description: "" });
     const [errors, setErrors] = useState({});
-    const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setErrors({});
-        try {
-            await createCategory(form);
+    const createMutation = useMutation({
+        mutationFn: createCategory,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["categories"] });
             navigate("/categories");
-        } catch (err) {
+        },
+        onError: (err) => {
             if (err.response?.data?.errors) {
                 setErrors(err.response.data.errors);
             }
-        } finally {
-            setLoading(false);
-        }
+        },
+    });
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        createMutation.mutate(form);
     };
 
     return (
@@ -78,10 +81,10 @@ export default function Create() {
                 <div className="flex gap-3">
                     <button
                         type="submit"
-                        disabled={loading}
+                        disabled={createMutation.isPending}
                         className="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-lg font-medium text-sm text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors"
                     >
-                        {loading ? "Saving..." : "Save"}
+                        {createMutation.isPending ? "Saving..." : "Save"}
                     </button>
                     <Link
                         to="/categories"

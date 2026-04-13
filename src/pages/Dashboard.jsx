@@ -1,28 +1,26 @@
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { getDashboard } from "../api/dashboard";
 
 export default function Dashboard() {
-    const [dashboard, setDashboard] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const {
+        data: response,
+        isLoading,
+        isError
+    } = useQuery({
+        queryKey: ["dashboard"],
+        queryFn: getDashboard
+    });
 
-    useEffect(() => {
-        fetchDashboard();
-    }, []);
+    const dashboard = response?.data ?? [];
 
-    const fetchDashboard = async () => {
-        try {
-            const response = await getDashboard();
-            setDashboard(response.data);
-        } catch (err) {
-            setError("Failed to load dashboard.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    if (loading) return <p>Loading...</p>;
-    if (error) return <p style={{ color: "red" }}>{error}</p>;
+    if (isLoading)
+        return <p className="p-8 text-center text-gray-500">Loading...</p>;
+    if (isError)
+        return (
+            <p className="p-8 text-center text-red-500">
+                Failed to load dashboard.
+            </p>
+        );
 
     return (
         <div>

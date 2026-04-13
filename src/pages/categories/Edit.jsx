@@ -1,37 +1,34 @@
-import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { getCategories, updateCategory } from "../../api/categories";
+import { getCategory, updateCategory } from "../../api/categories";
 
-export default function Edit() {
+// Inner component — receives data as props, initializes form cleanly
+function EditForm({category}) {
     const { id } = useParams();
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
 
-    const [form, setForm] = useState({ name: "", description: "" });
+    const [form, setForm] = useState({
+        name: category.name,
+        description: category.description
+    });
+    
     const [errors, setErrors] = useState({});
-    const [loading, setLoading] = useState(false);
-    const [fetching, setFetching] = useState(true);
 
-    useEffect(() => {
-        const fetchCategory = async () => {
-            try {
-                const response = await getCategories();
-                const category = response.data.find(
-                    (c) => c.id === parseInt(id),
-                );
-                if (category) {
-                    setForm({
-                        name: category.name,
-                        description: category.description ?? "",
-                    });
-                }
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setFetching(false);
+    const updateMutation = useMutation({
+        mutationFn: (data) => updateCategory(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['categories'] });
+            queryClient.invalidateQueries({ queryKey: ['categories', id] });
+            navigate('/categories');
+        },
+        onError: (err) => {
+            if (err.response?.data?.errors) {
+                setErrors(err.response.data.errors);
             }
-        };
-        fetchCategory();
-    }, [id]);
+        },
+    });
 
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });
@@ -39,21 +36,8 @@ export default function Edit() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
-        setErrors({});
-        try {
-            await updateCategory(id, form);
-            navigate("/categories");
-        } catch (err) {
-            if (err.response?.data?.errors) {
-                setErrors(err.response.data.errors);
-            }
-        } finally {
-            setLoading(false);
-        }
+        updateMutation.mutate(form);
     };
-
-    if (fetching) return <p>Loading...</p>;
 
     return (
         <div className="max-w-xl">
@@ -104,10 +88,10 @@ export default function Edit() {
                 <div className="flex gap-3">
                     <button
                         type="submit"
-                        disabled={loading}
+                        disabled={updateMutation.isPending}
                         className="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-lg font-medium text-sm text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors"
                     >
-                        {loading ? "Saving..." : "Update"}
+                        {updateMutation.isPending ? "Saving..." : "Update"}
                     </button>
                     <Link
                         to="/categories"
@@ -118,5 +102,23 @@ export default function Edit() {
                 </div>
             </form>
         </div>
+    );
+}
+
+// Outer component — handles loading
+export default function Edit() {
+    const { id } = useParams();
+
+    const { data: categoryRes, isLoading: categoryLoading } = useQuery({
+        queryKey: ['categories', id],
+        queryFn: () => getCategory(id),
+    });
+
+    if (categoryLoading) return <p>Loading...</p>;
+
+    return (
+        <EditForm
+            category={categoryRes.data}
+        />
     );
 }

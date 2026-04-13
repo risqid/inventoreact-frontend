@@ -1,88 +1,93 @@
-import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getProducts, deleteProduct, updateStock } from "../../api/products";
 
 export default function Index() {
-    const [products, setProducts] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const queryClient = useQueryClient();
     const [editingStock, setEditingStock] = useState(null);
     const [stockValue, setStockValue] = useState("");
     const navigate = useNavigate();
 
-    useEffect(() => {
-        fetchProducts();
-    }, []);
+    // Fetch products
+    const {
+        data: response,
+        isLoading,
+        isError,
+    } = useQuery({
+        queryKey: ["products"],
+        queryFn: getProducts,
+    });
 
-    const fetchProducts = async () => {
-        try {
-            const response = await getProducts();
-            setProducts(response.data);
-        } catch (err) {
-            setError("Failed to load products.");
-        } finally {
-            setLoading(false);
-        }
-    };
+    const products = response?.data ?? [];
 
-    const handleDelete = async (id) => {
-        if (!confirm("Are you sure?")) return;
-        try {
-            await deleteProduct(id);
-            setProducts(products.filter((p) => p.id !== id));
-        } catch (err) {
-            alert("Failed to delete product.");
-        }
-    };
+    // Delete mutation
+    const deleteMutation = useMutation({
+        mutationFn: deleteProduct,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["products"] });
+        },
+    });
 
-    const handleStockUpdate = async (id) => {
-        try {
-            const response = await updateStock(id, {
-                stock: parseInt(stockValue),
-            });
-            setProducts(products.map((p) => (p.id === id ? response.data : p)));
+    // Stock update mutation
+    const stockMutation = useMutation({
+        mutationFn: ({ id, stock }) => updateStock(id, { stock }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["products"] });
             setEditingStock(null);
             setStockValue("");
-        } catch (err) {
-            alert("Failed to update stock.");
-        }
+        },
+    });
+
+    const handleDelete = (id) => {
+        if (!confirm("Are you sure?")) return;
+        deleteMutation.mutate(id);
     };
 
-    if (loading) return <p>Loading...</p>;
-    if (error) return <p style={{ color: "red" }}>{error}</p>;
+    const handleStockUpdate = (id) => {
+        stockMutation.mutate({ id, stock: parseInt(stockValue) });
+    };
+
+    if (isLoading)
+        return <p className="p-8 text-center text-gray-500">Loading...</p>;
+    if (isError)
+        return (
+            <p className="p-8 text-center text-red-500">
+                Failed to load products.
+            </p>
+        );
 
     return (
         <div>
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold text-gray-900">Products</h1>
-                <Link
-                    to="/products/create"
-                    className="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-lg font-medium text-sm text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
-                >
-                    + New Product
+                <Link to="/products/create">
+                    <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
+                        + New Product
+                    </button>
                 </Link>
             </div>
 
             {products.length === 0 ? (
-                <p>No products found.</p>
+                <p className="text-gray-500">No products found.</p>
             ) : (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <table className="w-full">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                                     Name
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                                     Category
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                                     Price
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                                     Stock
                                 </th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                                     Actions
                                 </th>
                             </tr>
@@ -91,7 +96,7 @@ export default function Index() {
                             {products.map((product) => (
                                 <tr
                                     key={product.id}
-                                    className="hover:bg-gray-50 transition-colors"
+                                    className="hover:bg-gray-50"
                                 >
                                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
                                         {product.name}
@@ -107,7 +112,7 @@ export default function Index() {
                                     </td>
                                     <td className="px-6 py-4 text-sm">
                                         {editingStock === product.id ? (
-                                            <>
+                                            <div className="flex items-center gap-2">
                                                 <input
                                                     type="number"
                                                     value={stockValue}
@@ -116,38 +121,47 @@ export default function Index() {
                                                             e.target.value,
                                                         )
                                                     }
-                                                    style={{ width: "80px" }}
-                                                />{" "}
+                                                    className="w-20 border border-gray-300 rounded px-2 py-1 text-sm"
+                                                />
                                                 <button
                                                     onClick={() =>
                                                         handleStockUpdate(
                                                             product.id,
                                                         )
                                                     }
+                                                    disabled={
+                                                        stockMutation.isPending
+                                                    }
+                                                    className="text-xs bg-green-500 text-white px-2 py-1 rounded"
                                                 >
-                                                    Update
-                                                </button>{" "}
+                                                    {stockMutation.isPending
+                                                        ? "Saving..."
+                                                        : "Save"}
+                                                </button>
                                                 <button
                                                     onClick={() =>
                                                         setEditingStock(null)
                                                     }
+                                                    className="text-xs bg-gray-300 px-2 py-1 rounded"
                                                 >
                                                     Cancel
                                                 </button>
-                                            </>
+                                            </div>
                                         ) : (
-                                            <>
-                                                {product.stock === 0 ? (
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                                        Out of stock
-                                                    </span>
-                                                ) : (
-                                                    <span
-                                                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${product.stock <= 10 ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800"}`}
-                                                    >
-                                                        {product.stock} units
-                                                    </span>
-                                                )}
+                                            <div className="flex items-center gap-2">
+                                                <span
+                                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                        product.stock === 0
+                                                            ? "bg-red-100 text-red-800"
+                                                            : product.stock < 5
+                                                              ? "bg-yellow-100 text-yellow-800"
+                                                              : "bg-green-100 text-green-800"
+                                                    }`}
+                                                >
+                                                    {product.stock === 0
+                                                        ? "Out of stock"
+                                                        : `${product.stock} units`}
+                                                </span>
                                                 <button
                                                     onClick={() => {
                                                         setEditingStock(
@@ -157,21 +171,21 @@ export default function Index() {
                                                             product.stock,
                                                         );
                                                     }}
-                                                    className="ml-2 text-xs text-indigo-600 hover:text-indigo-900 underline"
+                                                    className="text-xs text-indigo-600 hover:underline"
                                                 >
                                                     Update
                                                 </button>
-                                            </>
+                                            </div>
                                         )}
                                     </td>
-                                    <td className="px-6 py-4 text-right text-sm">
+                                    <td className="px-6 py-4 text-sm">
                                         <button
                                             onClick={() =>
                                                 navigate(
                                                     `/products/${product.id}/edit`,
                                                 )
                                             }
-                                            className="text-indigo-600 hover:text-indigo-900 font-medium mr-4"
+                                            className="text-indigo-600 hover:underline mr-3"
                                         >
                                             Edit
                                         </button>
@@ -179,9 +193,12 @@ export default function Index() {
                                             onClick={() =>
                                                 handleDelete(product.id)
                                             }
-                                            className="text-red-600 hover:text-red-900 font-medium"
+                                            disabled={deleteMutation.isPending}
+                                            className="text-red-600 hover:underline"
                                         >
-                                            Delete
+                                            {deleteMutation.isPending
+                                                ? "Deleting..."
+                                                : "Delete"}
                                         </button>
                                     </td>
                                 </tr>

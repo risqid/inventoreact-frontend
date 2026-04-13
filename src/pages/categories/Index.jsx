@@ -1,40 +1,44 @@
-import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { getCategories, deleteCategory } from "../../api/categories";
 
 export default function Index() {
-    const [categories, setCategories] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const queryClient = useQueryClient();
     const navigate = useNavigate();
 
-    useEffect(() => {
-        fetchCategories();
-    }, []);
+    // Fetch categories
+    const {
+        data: response,
+        isLoading,
+        isError,
+    } = useQuery({
+        queryKey: ["categories"],
+        queryFn: getCategories,
+    });
 
-    const fetchCategories = async () => {
-        try {
-            const response = await getCategories();
-            setCategories(response.data);
-        } catch (err) {
-            setError("Failed to load categories.");
-        } finally {
-            setLoading(false);
-        }
-    };
+    const categories = response?.data ?? [];
+
+    // Delete mutation
+    const deleteMutation = useMutation({
+        mutationFn: deleteCategory,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["categories"] });
+        },
+    });
 
     const handleDelete = async (id) => {
         if (!confirm("Are you sure?")) return;
-        try {
-            await deleteCategory(id);
-            setCategories(categories.filter((c) => c.id !== id));
-        } catch (err) {
-            alert("Failed to delete category.");
-        }
+        deleteMutation.mutate(id);
     };
 
-    if (loading) return <p>Loading...</p>;
-    if (error) return <p style={{ color: "red" }}>{error}</p>;
+    if (isLoading)
+        return <p className="p-8 text-center text-gray-500">Loading...</p>;
+    if (isError)
+        return (
+            <p className="p-8 text-center text-red-500">
+                Failed to load categories.
+            </p>
+        );
 
     return (
         <div>
@@ -100,9 +104,12 @@ export default function Index() {
                                             onClick={() =>
                                                 handleDelete(category.id)
                                             }
-                                            className="text-red-600 hover:text-red-900 font-medium"
+                                            disabled={deleteMutation.isPending}
+                                            className="text-red-600 hover:underline"
                                         >
-                                            Delete
+                                            {deleteMutation.isPending
+                                                ? "Deleting..."
+                                                : "Delete"}
                                         </button>
                                     </td>
                                 </tr>

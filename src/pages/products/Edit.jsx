@@ -1,74 +1,47 @@
-import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { getProducts, updateProduct } from "../../api/products";
+import { getProduct, updateProduct } from "../../api/products";
 import { getCategories } from "../../api/categories";
 
-export default function Edit() {
+// Inner component — receives data as props, initializes form cleanly
+function EditForm({ product, categories }) {
     const { id } = useParams();
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
 
-    const [form, setForm] = useState({
-        category_id: "",
-        name: "",
-        description: "",
-        price: "",
-        stock: "",
+    const [form, setForm]   = useState({
+        category_id: product.category_id,
+        name:        product.name,
+        description: product.description ?? '',
+        price:       product.price,
+        stock:       product.stock,
     });
-    const [categories, setCategories] = useState([]);
-    const [errors, setErrors] = useState({});
-    const [loading, setLoading] = useState(false);
-    const [fetching, setFetching] = useState(true);
 
-    useEffect(() => {
-        const load = async () => {
-            try {
-                const [productsRes, categoriesRes] = await Promise.all([
-                    getProducts(),
-                    getCategories(),
-                ]);
-                const product = productsRes.data.find(
-                    (p) => p.id === parseInt(id),
-                );
-                if (product) {
-                    setForm({
-                        category_id: product.category_id,
-                        name: product.name,
-                        description: product.description ?? "",
-                        price: product.price,
-                        stock: product.stock,
-                    });
-                }
-                setCategories(categoriesRes.data);
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setFetching(false);
+    const [errors, setErrors] = useState({});
+
+    const updateMutation = useMutation({
+        mutationFn: (data) => updateProduct(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+            queryClient.invalidateQueries({ queryKey: ['products', id] });
+            navigate('/products');
+        },
+        onError: (err) => {
+            if (err.response?.data?.errors) {
+                setErrors(err.response.data.errors);
             }
-        };
-        load();
-    }, [id]);
+        },
+    });
 
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
-        setLoading(true);
-        setErrors({});
-        try {
-            await updateProduct(id, form);
-            navigate("/products");
-        } catch (err) {
-            if (err.response?.data?.errors) {
-                setErrors(err.response.data.errors);
-            }
-        } finally {
-            setLoading(false);
-        }
+        updateMutation.mutate(form);
     };
-
-    if (fetching) return <p>Loading...</p>;
 
     return (
         <div className="max-w-xl">
@@ -175,10 +148,10 @@ export default function Edit() {
                 <div className="flex gap-3">
                     <button
                         type="submit"
-                        disabled={loading}
+                        disabled={updateMutation.isPending}
                         className="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-lg font-medium text-sm text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors"
                     >
-                        {loading ? "Saving..." : "Update"}
+                        {updateMutation.isPending ? "Saving..." : "Update"}
                     </button>
                     <Link
                         to="/products"
@@ -189,5 +162,29 @@ export default function Edit() {
                 </div>
             </form>
         </div>
+    );
+}
+
+// Outer component — handles loading
+export default function Edit() {
+    const { id } = useParams();
+
+    const { data: productRes, isLoading: productLoading } = useQuery({
+        queryKey: ['products', id],
+        queryFn: () => getProduct(id),
+    });
+
+    const { data: categoriesRes, isLoading: categoriesLoading } = useQuery({
+        queryKey: ['categories'],
+        queryFn: getCategories,
+    });
+
+    if (productLoading || categoriesLoading) return <p>Loading...</p>;
+
+    return (
+        <EditForm
+            product={productRes.data}
+            categories={categoriesRes.data}
+        />
     );
 }
