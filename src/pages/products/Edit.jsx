@@ -1,17 +1,23 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { getProducts, updateProduct } from '../../api/products';
-import { getCategories } from '../../api/categories';
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { getProducts, updateProduct } from "../../api/products";
+import { getCategories } from "../../api/categories";
 
 export default function Edit() {
-    const { id }   = useParams();
+    const { id } = useParams();
     const navigate = useNavigate();
 
-    const [form, setForm]             = useState({ category_id: '', name: '', description: '', price: '', stock: '' });
+    const [form, setForm] = useState({
+        category_id: "",
+        name: "",
+        description: "",
+        price: "",
+        stock: "",
+    });
     const [categories, setCategories] = useState([]);
-    const [errors, setErrors]         = useState({});
-    const [loading, setLoading]       = useState(false);
-    const [fetching, setFetching]     = useState(true);
+    const [errors, setErrors] = useState({});
+    const [loading, setLoading] = useState(false);
+    const [fetching, setFetching] = useState(true);
 
     useEffect(() => {
         const load = async () => {
@@ -20,14 +26,16 @@ export default function Edit() {
                     getProducts(),
                     getCategories(),
                 ]);
-                const product = productsRes.data.find(p => p.id === parseInt(id));
+                const product = productsRes.data.find(
+                    (p) => p.id === parseInt(id),
+                );
                 if (product) {
                     setForm({
                         category_id: product.category_id,
-                        name:        product.name,
-                        description: product.description ?? '',
-                        price:       product.price,
-                        stock:       product.stock,
+                        name: product.name,
+                        description: product.description ?? "",
+                        price: product.price,
+                        stock: product.stock,
                     });
                 }
                 setCategories(categoriesRes.data);
@@ -50,7 +58,7 @@ export default function Edit() {
         setErrors({});
         try {
             await updateProduct(id, form);
-            navigate('/products');
+            navigate("/products");
         } catch (err) {
             if (err.response?.data?.errors) {
                 setErrors(err.response.data.errors);
@@ -63,44 +71,122 @@ export default function Edit() {
     if (fetching) return <p>Loading...</p>;
 
     return (
-        <div style={{ maxWidth: '600px' }}>
-            <h1>Edit Product</h1>
+        <div className="max-w-xl">
+            <h1 className="text-2xl font-bold text-gray-900 mb-6">
+                Edit Product
+            </h1>
 
-            <form onSubmit={handleSubmit}>
-                <div style={{ marginBottom: '1rem' }}>
-                    <label>Category</label><br />
-                    <select name="category_id" value={form.category_id} onChange={handleChange}>
+            <form
+                onSubmit={handleSubmit}
+                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+            >
+                <div className="mb-5">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Category
+                    </label>
+                    <select
+                        name="category_id"
+                        value={form.category_id}
+                        onChange={handleChange}
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    >
                         <option value="">Select category</option>
-                        {categories.map(cat => (
-                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        {categories.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                                {cat.name}
+                            </option>
                         ))}
                     </select>
-                    {errors.category_id && <p style={{ color: 'red' }}>{errors.category_id[0]}</p>}
+                    {errors.category_id && (
+                        <p className="mt-1 text-sm text-red-600">
+                            {errors.category_id}
+                        </p>
+                    )}
                 </div>
-                <div style={{ marginBottom: '1rem' }}>
-                    <label>Name</label><br />
-                    <input name="name" value={form.name} onChange={handleChange} />
-                    {errors.name && <p style={{ color: 'red' }}>{errors.name[0]}</p>}
+
+                <div className="mb-5">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Name
+                    </label>
+                    <input
+                        name="name"
+                        type="text"
+                        value={form.name}
+                        onChange={handleChange}
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
+                    {errors.name && (
+                        <p className="mt-1 text-sm text-red-600">
+                            {errors.name}
+                        </p>
+                    )}
                 </div>
-                <div style={{ marginBottom: '1rem' }}>
-                    <label>Description</label><br />
-                    <textarea name="description" value={form.description} onChange={handleChange} />
+
+                <div className="mb-5">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Description
+                    </label>
+                    <textarea
+                        name="description"
+                        value={form.description}
+                        onChange={handleChange}
+                        rows={3}
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    />
                 </div>
-                <div style={{ marginBottom: '1rem' }}>
-                    <label>Price</label><br />
-                    <input type="number" name="price" value={form.price} onChange={handleChange} />
-                    {errors.price && <p style={{ color: 'red' }}>{errors.price[0]}</p>}
+
+                <div className="grid grid-cols-2 gap-4 mb-5">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Price
+                        </label>
+                        <input
+                            name="price"
+                            type="number"
+                            value={form.price}
+                            onChange={handleChange}
+                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        />
+                        {errors.price && (
+                            <p className="mt-1 text-sm text-red-600">
+                                {errors.price}
+                            </p>
+                        )}
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Stock
+                        </label>
+                        <input
+                            name="stock"
+                            type="number"
+                            value={form.stock}
+                            onChange={handleChange}
+                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        />
+                        {errors.stock && (
+                            <p className="mt-1 text-sm text-red-600">
+                                {errors.stock}
+                            </p>
+                        )}
+                    </div>
                 </div>
-                <div style={{ marginBottom: '1rem' }}>
-                    <label>Stock</label><br />
-                    <input type="number" name="stock" value={form.stock} onChange={handleChange} />
-                    {errors.stock && <p style={{ color: 'red' }}>{errors.stock[0]}</p>}
+
+                <div className="flex gap-3">
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-lg font-medium text-sm text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors"
+                    >
+                        {loading ? "Saving..." : "Update"}
+                    </button>
+                    <Link
+                        to="/products"
+                        className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg font-medium text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                    >
+                        Cancel
+                    </Link>
                 </div>
-                <button type="submit" disabled={loading}>
-                    {loading ? 'Saving...' : 'Update'}
-                </button>
-                {' '}
-                <Link to="/products">Cancel</Link>
             </form>
         </div>
     );

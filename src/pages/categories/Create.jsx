@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { createCategory } from '../../api/categories';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { createCategory } from "../../api/categories";
 
 export default function Create() {
     const navigate = useNavigate();
 
-    const [form, setForm]       = useState({ name: '', description: '' });
-    const [errors, setErrors]   = useState({});
+    const [form, setForm] = useState({ name: "", description: "" });
+    const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => {
@@ -19,7 +19,7 @@ export default function Create() {
         setErrors({});
         try {
             await createCategory(form);
-            navigate('/categories');
+            navigate("/categories");
         } catch (err) {
             if (err.response?.data?.errors) {
                 setErrors(err.response.data.errors);
@@ -30,32 +30,66 @@ export default function Create() {
     };
 
     return (
-        <div style={{ maxWidth: '600px' }}>
-            <h1>New Category</h1>
+        <div className="max-w-xl">
+            <h1 className="text-2xl font-bold text-gray-900 mb-6">
+                New Category
+            </h1>
 
-            <form onSubmit={handleSubmit}>
-                <div style={{ marginBottom: '1rem' }}>
-                    <label>Name</label><br />
+            <form
+                onSubmit={handleSubmit}
+                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+            >
+                <div className="mb-5">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Name
+                    </label>
                     <input
                         name="name"
+                        type="text"
                         value={form.name}
                         onChange={handleChange}
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                     />
-                    {errors.name && <p style={{ color: 'red' }}>{errors.name[0]}</p>}
+                    {errors.name && (
+                        <p className="mt-1 text-sm text-red-600">
+                            {errors.name[0]}
+                        </p>
+                    )}
                 </div>
-                <div style={{ marginBottom: '1rem' }}>
-                    <label>Description</label><br />
+
+                <div className="mb-5">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Description
+                    </label>
                     <textarea
                         name="description"
                         value={form.description}
                         onChange={handleChange}
+                        rows={4}
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                     />
+                    {errors.description && (
+                        <p className="mt-1 text-sm text-red-600">
+                            {errors.description}
+                        </p>
+                    )}
                 </div>
-                <button type="submit" disabled={loading}>
-                    {loading ? 'Saving...' : 'Save'}
-                </button>
-                {' '}
-                <Link to="/categories">Cancel</Link>
+
+                <div className="flex gap-3">
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-lg font-medium text-sm text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors"
+                    >
+                        {loading ? "Saving..." : "Save"}
+                    </button>
+                    <Link
+                        to="/categories"
+                        className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg font-medium text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                    >
+                        Cancel
+                    </Link>
+                </div>
             </form>
         </div>
     );

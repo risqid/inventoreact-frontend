@@ -26,15 +26,8 @@ export default function Dashboard() {
 
     return (
         <div>
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: "1rem",
-                }}
-            >
-                <h1>Dashboard</h1>
-            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl p-6 text-white shadow-lg">
                     <p className="text-indigo-100 text-sm font-medium">
